@@ -86,7 +86,7 @@ kernel_bc="${tempdir}/kernel.bc"
 # BEGIN REMOVE ONCE INSTALLED
 @CLANG@ ${CLANG_FLAGS} $EXTRA_CLANG_FLAGS -c -emit-llvm -I@abs_top_builddir@ -include @abs_top_builddir@/include/${target_dir}/types.h -include @abs_top_srcdir@/include/_kernel.h -o ${kernel_bc} -x cl $1
 rm -f ${header}
-@OPT@ -load=@abs_top_builddir@/lib/llvmopencl/.libs/llvmopencl.so -generate-header -disable-output -header=${header} ${kernel_bc}
+@OPT@ -load=@abs_top_builddir@/lib/@llvmopencl_dir@/.libs/llvmopencl.so -generate-header -disable-output -header=${header} ${kernel_bc}
 if false ; then
 # END REMOVE ONCE INSTALLED
 @CLANG@ ${CLANG_FLAGS} $EXTRA_CLANG_FLAGS -c -emit-llvm  -include @pkgincludedir@/${target_dir}/types.h -include @pkgincludedir@/_kernel.h -o ${kernel_bc} -x cl $1
@@ -102,7 +102,7 @@ pocl_lib="@pkglibdir@/llvmopencl.so"
 full_target_dir="@pkglibdir@/${target_dir}"
 # BEGIN REMOVE ONCE INSTALLED
 # Fixing variables until the script is installed
-pocl_lib="@abs_top_builddir@/lib/llvmopencl/.libs/llvmopencl.so"
+pocl_lib="@abs_top_builddir@/lib/@llvmopencl_dir@/.libs/llvmopencl.so"
 full_target_dir="@abs_top_builddir@/lib/kernel/${target_dir}"
 # END REMOVE ONCE INSTALLED
 

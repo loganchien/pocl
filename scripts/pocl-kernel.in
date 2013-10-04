@@ -53,7 +53,7 @@ header="`dirname $1`/`basename $1 .bc`_header.h"
 rm -f ${header}
 
 # BEGIN REMOVE ONCE INSTALLED
-@OPT@ -load=@abs_top_builddir@/lib/llvmopencl/.libs/llvmopencl.so -break-constgeps -generate-header -kernel=${kernel} -header=${header} -disable-output $1
+@OPT@ -load=@abs_top_builddir@/lib/@llvmopencl_dir@/.libs/llvmopencl.so -break-constgeps -generate-header -kernel=${kernel} -header=${header} -disable-output $1
 if false ; then
 # END REMOVE ONCE INSTALLED
 @OPT@ -load=@pkglibdir@/llvmopencl.so -break-constgeps -generate-header -kernel=${kernel} -header=${header} -disable-output $1

@@ -94,7 +94,7 @@ header="`dirname $1`/`basename $1 .bc`_header.h"
 pocl_lib=@pkglibdir@/llvmopencl.so
 # BEGIN REMOVE ONCE INSTALLED
 # Fixing pocl_lib until the script is installed
-pocl_lib=@abs_top_builddir@/lib/llvmopencl/.libs/llvmopencl.so
+pocl_lib=@abs_top_builddir@/lib/@llvmopencl_dir@/.libs/llvmopencl.so
 # END REMOVE ONCE INSTALLED
 
 OPT_SWITCH="-O3"

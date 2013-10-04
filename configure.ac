@@ -29,8 +29,9 @@ AC_CONFIG_HEADER([config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_TESTDIR([tests])
-AC_CANONICAL_TARGET
+AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([foreign])
 AM_SILENT_RULES([AM_DEFAULT_VERBOSITY=0])
 
@@ -49,6 +50,15 @@ case $host_os in
     AC_SUBST([LIBRARY_SUFFIX], [".so"] )
          ;;
 esac
+
+# check for cross compiling
+AM_CONDITIONAL([IS_CROSS_COMPILING], [test x$host != x$build])
+
+if test x$host == x$build; then
+    AC_SUBST([llvmopencl_dir], ["llvmopencl"])
+else
+    AC_SUBST([llvmopencl_dir], ["build-llvmopencl"])
+fi
 
 # check for tools
 PKG_PROG_PKG_CONFIG

@@ -73,4 +73,13 @@ install-paths.h:
 		mv $@.new $@ ;\
 	fi
 
+.PHONY: build-llvmopencl
+build-llvmopencl:
+	mkdir -p $(abs_builddir)/lib/build-llvmopencl
+	(cd $(abs_builddir)/lib/build-llvmopencl; \
+         $(abs_srcdir)/lib/llvmopencl/configure; \
+         make -j4)
 
+if IS_CROSS_COMPILING
+all: build-llvmopencl
+endif
