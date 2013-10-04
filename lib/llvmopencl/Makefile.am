@@ -28,8 +28,12 @@ else
 pkglib_LTLIBRARIES = llvmopencl.la
 endif
 
-AM_CXXFLAGS = -I@top_srcdir@/fix-include -I@top_srcdir@/include `@LLVM_CONFIG@ --cxxflags` -fno-rtti
-AM_LDFLAGS = -module -export-dynamic -version-info ${KERNEL_COMPILER_LIB_VERSION} `@LLVM_CONFIG@ --ldflags`
+AM_CXXFLAGS = -I@top_srcdir@/../../fix-include \
+              -I@top_srcdir@/../../include \
+              `@LLVM_CONFIG@ --cxxflags` -fno-rtti
+AM_LDFLAGS = -module -export-dynamic \
+             -version-info ${KERNEL_COMPILER_LIB_VERSION} \
+             `@LLVM_CONFIG@ --ldflags`
 #this static linking gets only added when we build pocl with "scripts", not "API"
 llvmopencl_la_LIBADD = @LLVM_LIBS@
 

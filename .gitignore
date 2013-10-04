@@ -10,6 +10,7 @@ aclocal.m4
 autom4te.cache
 config.h
 config.h.in
+config.h.in~
 config.log
 config.status
 config/ar-lib
@@ -38,6 +39,13 @@ include/tce/types.h
 include/x86_64/types.h
 install-paths.h
 libtool
+lib/llvmopencl/config.guess
+lib/llvmopencl/config.h.in~
+lib/llvmopencl/config.sub
+lib/llvmopencl/depcomp
+lib/llvmopencl/install-sh
+lib/llvmopencl/ltmain.sh
+lib/llvmopencl/missing
 m4/libtool.m4
 m4/ltoptions.m4
 m4/ltsugar.m4
