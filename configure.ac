@@ -1,19 +1,19 @@
 ##                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-# 
+#
 # Copyright (c) 2011-2013 Universidad Rey Juan Carlos and
 #                         Pekka Jääskeläinen / Tampere University of Technology
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -93,12 +93,12 @@ case "$LLVM_VERSION" in
      AC_DEFINE([LLVM_3_2], [], "Using LLVM 3.2")
    ;;
      3.3*)
-     AC_DEFINE([LLVM_3_3], [], "Using LLVM 3.3 RC")     
-   ;; 
+     AC_DEFINE([LLVM_3_3], [], "Using LLVM 3.3 RC")
+   ;;
      3.4*)
-     AC_DEFINE([LLVM_3_4], [], "Using LLVM svn (upcoming 3.4)")     
-     AC_DEFINE([LLVM_SVN], [], "Using LLVM svn (upcoming 3.4)")     
-   ;;   
+     AC_DEFINE([LLVM_3_4], [], "Using LLVM svn (upcoming 3.4)")
+     AC_DEFINE([LLVM_SVN], [], "Using LLVM svn (upcoming 3.4)")
+   ;;
      *)
    AC_MSG_ERROR(
    [
@@ -137,7 +137,7 @@ else
 if test ! -e $LLVM_SHARED_LIB_FILE;
 then
         AC_MSG_ERROR([
-$LLVM_SHARED_LIB_FILE not found. 
+$LLVM_SHARED_LIB_FILE not found.
 Recompile and install LLVM after ./configure --enable-shared.
 Read the INSTALL file for details.])
 fi
@@ -148,13 +148,13 @@ AC_SUBST([LLVM_LIBS])
 LLVM_RTTI_CHECK=$($LLVM_CONFIG --cxxflags | grep -i "\-fno-rtti")
 
 if test x"$LLVM_RTTI_CHECK" != x; then
-AC_MSG_WARN([Your LLVM was not built with RTTI. 
-You should rebuild LLVM with 'make REQUIRES_RTTI=1'. 
+AC_MSG_WARN([Your LLVM was not built with RTTI.
+You should rebuild LLVM with 'make REQUIRES_RTTI=1'.
 See the INSTALL file for more information.])
 fi
 
 AC_ARG_ENABLE([region-allocator],
-[AS_HELP_STRING([--disable-region-allocator], 
+[AS_HELP_STRING([--disable-region-allocator],
  [Do not use a custom OpenCL optimized region-based memory allocator but allocate buffers with malloc directly.])],
 [],
 [AC_DEFINE([CUSTOM_BUFFER_ALLOCATOR], [], "Use a custom buffer allocator")])
@@ -198,7 +198,7 @@ if test x"$enable_testsuites" = xcheck ; then
   fi
   if test -f "$srcdir/examples/piglit/piglit/piglit-run.py" ; then
     enable_testsuite_piglit=yes
-  fi  
+  fi
 fi
 AS_CASE([,"$enable_testsuites",],
   [*,all,*|*,yes,*], [enable_testsuites="opencl-book-samples,ViennaCL,Rodinia,Parboil,amd,VexCL,piglit"],
@@ -270,8 +270,8 @@ if test "$enable_testsuite_amd" = "yes" ; then
     AC_MSG_WARN([disabling AMD APP SDK testsuite as the 2.8 lnx64 package not in '$srcdir/examples/AMD'.])
     enable_testsuite_amd=no
   fi
-  PKG_CHECK_MODULES([SDL], [sdl >= 1.2], [:], 
-    [ AC_MSG_WARN([pkg-config could not find libSDL, AMD APP SDK testsuite is not used ]) 
+  PKG_CHECK_MODULES([SDL], [sdl >= 1.2], [:],
+    [ AC_MSG_WARN([pkg-config could not find libSDL, AMD APP SDK testsuite is not used ])
       enable_testsuite_amd=no
     ])
 fi
@@ -304,7 +304,7 @@ if test "$enable_testsuite_piglit" = "yes" ; then
     AC_MSG_WARN([disabling Piglit testsuite: piglit-run.py not found in '$srcdir/examples/piglit/piglit/'])
     enable_testsuite_piglit=no
   fi
-fi   
+fi
 
 #All ViennaCL tests use doubles, thus they fail on these platforms
 case $host_cpu in
@@ -400,8 +400,8 @@ if test x"$icd" != xno; then :
   # In fact, ocl-icd >= 1.4 is required. However, Debian wheezy will
   # have ocl-icd 1.3 *with the required fixes*
   # So, lets hope Debian wheezy adds a minor version number to the bugfixed ocl-icd.
-  PKG_CHECK_MODULES([OCL_ICD], [ocl-icd >= 1.3], 
-    [ OCL_ICD_available=yes 
+  PKG_CHECK_MODULES([OCL_ICD], [ocl-icd >= 1.3],
+    [ OCL_ICD_available=yes
       AC_DEFINE([HAVE_OCL_ICD], [1], [Defined to 1 if ocl-icd is found on system]) ],
     [:])
   # In case pkg-config could not find ocl-icd above, try the system default.
@@ -424,7 +424,7 @@ AS_CASE(["$icd,$OCL_ICD_available"],
   [check,no], [ icd=no
     AC_MSG_NOTICE([disabling ICD extension build (ocl-icd not available)]) ],
   [yes,no], [AC_MSG_WARN([enabling ICD, but the testsuite might not work! (ocl-icd not available)])],
-  [AC_MSG_ERROR([Invalid value for --enable-icd])]) 
+  [AC_MSG_ERROR([Invalid value for --enable-icd])])
 
 if test x"$icd" = xyes; then
   AC_DEFINE([BUILD_ICD], [], "Build with ICD")
@@ -444,9 +444,9 @@ AS_CASE(["$oclsym,$icd"],
   [no,yes], [ AC_MSG_NOTICE([disabling direct linkage as requested]) ],
   [default,*], [ oclsym=yes
     AC_MSG_NOTICE([enabling direct linkage in pocl library]) ],
-  [yes,*], [ 
+  [yes,*], [
     AC_MSG_NOTICE([enabling direct linkage as requested]) ],
-  [AC_MSG_ERROR([Invalid value for --enable-direct-linkage])]) 
+  [AC_MSG_ERROR([Invalid value for --enable-direct-linkage])])
 
 if test x"$oclsym" = xyes; then
   AC_DEFINE([DIRECT_LINKAGE], [], "Export OpenCL symbols")
@@ -468,11 +468,11 @@ AS_CASE(["$tests_with_icd,$icd,$oclsym"],
     AC_MSG_NOTICE([tests will be run through the ICD]) ],
   [default,*,yes], [ tests_with_icd=no
     AC_MSG_NOTICE([tests will use POCL library directly]) ],
-  [AC_MSG_ERROR([Invalid value for --enable-tests-with-icd])]) 
+  [AC_MSG_ERROR([Invalid value for --enable-tests-with-icd])])
 
 if test x"$tests_with_icd" = xyes; then
-  PKG_CHECK_MODULES([OPENCL], [OpenCL >= 1.2], 
-  [], 
+  PKG_CHECK_MODULES([OPENCL], [OpenCL >= 1.2],
+  [],
   [
     AC_MSG_WARN([Tests through ICD loader enabled, but OpenCL.pc file installed by ocl-icd seems missing])
     if test -z "$OPENCL_LIBS"; then
@@ -594,7 +594,7 @@ AC_CHECK_HEADERS([GL/gl.h OpenGL/OpenGL.h], [opengl_found="ok"; break])
 
 test -z "$opengl_found" && AC_MSG_FAILURE([Please install an OpenGL implementation with gl.h or OpenGL.h. It is required by the C++ bindings.])
 
-PKG_CHECK_MODULES([GLEW], [glew], 
+PKG_CHECK_MODULES([GLEW], [glew],
   [
     AC_DEFINE([HAVE_GLEW], [],
         [Defined if The OpenGL Extension Wrangler library is found])
@@ -620,7 +620,7 @@ AC_DEFUN([LLVM_PROG_WARN], [
 
 LLVM_PROG([CLANG], [clang], [Program to compile kernels to bytecode])
 
-# Check for a functioning clang++. It is needed to compile faster math 
+# Check for a functioning clang++. It is needed to compile faster math
 # builtins from vecmathlib.
 LLVM_PROG_WARN([CLANGXX], [clang++])
 
@@ -694,7 +694,7 @@ AC_DEFINE_UNQUOTED([LLC], ["$LLC"], [LLVM compiler executable.])
 # This is the target architecture of the basic and pthreads devices.
 # These always are the same arch as host (in current pocl implementation).
 # Also, this is the autoconf "host".
-# We have: 
+# We have:
 # target triplet: the OCL device target triple
 # kernel dir: where to search for the ocl lib kernel
 HOST_LLC_FLAGS="-relocation-model=pic"
@@ -705,12 +705,12 @@ case $host_os in
     # MacOS ld outputs useless warnings like
     # ld: warning: -macosx_version_min not specificed, assuming 10.7
     # suppress them with -w.
-    HOST_LD_FLAGS="-bundle -w"  
+    HOST_LD_FLAGS="-bundle -w"
     ICD_LD_FLAGS="-single_module"
     ;;
   *gnu )
     ICD_LD_FLAGS="-Wl,-Bsymbolic"
-    ;;  
+    ;;
 esac
 AC_SUBST([ICD_LD_FLAGS])
 case $host_cpu in
@@ -746,7 +746,7 @@ case $host_cpu in
     kernel_dir="x86_64"
     CL_DEVICE_ADDRESS_BITS=32
     ;;
- 
+
   tce)
     AC_MSG_NOTICE([using the TCE optimized kernel lib for the native device])
     HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
@@ -784,7 +784,7 @@ AC_DEFINE_UNQUOTED([TARGET_CLANG_FLAGS],
                    [Parameters to for target compilation.])
 AC_SUBST([TARGET_LLC_FLAGS])
 AC_DEFINE_UNQUOTED([TARGET_LLC_FLAGS],
-                   ["$TARGET_LLC_FLAGS"], 
+                   ["$TARGET_LLC_FLAGS"],
                    [Parameters to llc for code generation in the target.])
 
 AC_SUBST([HOST], [$host])
@@ -800,7 +800,7 @@ AC_DEFINE_UNQUOTED([HOST_CLANG_FLAGS],
                    [Parameters to for host compilation.])
 AC_SUBST([HOST_LLC_FLAGS])
 AC_DEFINE_UNQUOTED([HOST_LLC_FLAGS],
-                   ["$HOST_LLC_FLAGS"], 
+                   ["$HOST_LLC_FLAGS"],
                    [Parameters to llc for code generation in the host.])
 
 AC_SUBST([HOST_LD_FLAGS])
@@ -823,11 +823,11 @@ OCL_DRIVERS="basic pthreads"
 AC_PATH_PROG([TCE_CONFIG], [tce-config])
 
 AC_ARG_ENABLE([tce],
-              [AS_HELP_STRING([--disable-tce], 
+              [AS_HELP_STRING([--disable-tce],
                               [Do not build TCE driver, even if TCE is found.])],
               [try_tce="$enableval"],
               [try_tce="yes"])
-            
+
 if test ! -z "$TCE_CONFIG" -a x"$try_tce" = xyes; then
 
 AC_PATH_PROG([TCECC], [tcecc])
@@ -1037,7 +1037,7 @@ AC_C_BIGENDIAN
 # 3:0:2 == 0.9 (currently backwards compatible with 0.7, thus age = 2).
 AC_SUBST([LIB_VERSION], ["3:0:2"])
 
-# The kernel compiler opt plugin shared library, however, changes more 
+# The kernel compiler opt plugin shared library, however, changes more
 # drastically. Let's try to follow the similar 'current' numbering as
 # the pocl host API library and perhaps tune the 'revision' and 'age' later.
 AC_SUBST([KERNEL_COMPILER_LIB_VERSION], ["3:0:0"])
@@ -1108,7 +1108,7 @@ then
 echo " disabled"
 else
  echo " enabled"
- if test x"$OCL_ICD_available" != xyes; 
+ if test x"$OCL_ICD_available" != xyes;
  then
   echo  Warning: ocl-icd not found.
   if test x"$sysconfdir" != x/etc;
@@ -1116,7 +1116,7 @@ else
    echo "Not installing pocl.icd to /etc/OpenCL/vendors. This means that"
    echo "your ICD loader probably will not find pocl. See README for details."
   else
-   echo "'make check' might fail if it is run before 'make install' unless" 
+   echo "'make check' might fail if it is run before 'make install' unless"
    echo "your ICD loader supports the OCL_ICD_VENDORS environment variable"
    echo "please consult http://pocl.sourceforge.net/docs/html/development.html#test-suite"
    echo "for details."
