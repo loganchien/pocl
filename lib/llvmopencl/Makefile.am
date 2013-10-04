@@ -33,28 +33,28 @@ AM_LDFLAGS = -module -export-dynamic -version-info ${KERNEL_COMPILER_LIB_VERSION
 #this static linking gets only added when we build pocl with "scripts", not "API"
 llvmopencl_la_LIBADD = @LLVM_LIBS@
 
-PASSES_SOURCES = Barrier.h						\
-                        BarrierBlock.h BarrierBlock.cc				\
-                        Kernel.h Kernel.cc					\
-                        ParallelRegion.h ParallelRegion.cc			\
-                        CanonicalizeBarriers.h CanonicalizeBarriers.cc		\
-                        LoopBarriers.h LoopBarriers.cc				\
-                        GenerateHeader.cc Workgroup.h Workgroup.cc		\
-						BarrierTailReplication.h BarrierTailReplication.cc	\
-                        Flatten.cc IsolateRegions.h IsolateRegions.cc \
-						WorkitemReplication.h WorkitemReplication.cc \
-						ImplicitLoopBarriers.h ImplicitLoopBarriers.cc \
-						WorkItemAliasAnalysis.cc WIVectorize.cc \
-						WorkitemHandler.h WorkitemHandler.cc \
-						WorkitemLoops.h WorkitemLoops.cc \
-						PHIsToAllocas.h PHIsToAllocas.cc \
-						BreakConstantGEPs.h BreakConstantGEPs.cpp \
-						WorkitemHandlerChooser.h WorkitemHandlerChooser.cc \
-						AllocasToEntry.h AllocasToEntry.cc \
-						TargetAddressSpaces.h TargetAddressSpaces.cc \
-						LLVMUtils.cc LLVMUtils.h \
-						VariableUniformityAnalysis.h VariableUniformityAnalysis.cc \
-						AutomaticLocals.cc
+PASSES_SOURCES = Barrier.h \
+                 BarrierBlock.h BarrierBlock.cc \
+                 Kernel.h Kernel.cc \
+                 ParallelRegion.h ParallelRegion.cc \
+                 CanonicalizeBarriers.h CanonicalizeBarriers.cc \
+                 LoopBarriers.h LoopBarriers.cc \
+                 GenerateHeader.cc Workgroup.h Workgroup.cc \
+                 BarrierTailReplication.h BarrierTailReplication.cc \
+                 Flatten.cc IsolateRegions.h IsolateRegions.cc \
+                 WorkitemReplication.h WorkitemReplication.cc \
+                 ImplicitLoopBarriers.h ImplicitLoopBarriers.cc \
+                 WorkItemAliasAnalysis.cc WIVectorize.cc \
+                 WorkitemHandler.h WorkitemHandler.cc \
+                 WorkitemLoops.h WorkitemLoops.cc \
+                 PHIsToAllocas.h PHIsToAllocas.cc \
+                 BreakConstantGEPs.h BreakConstantGEPs.cpp \
+                 WorkitemHandlerChooser.h WorkitemHandlerChooser.cc \
+                 AllocasToEntry.h AllocasToEntry.cc \
+                 TargetAddressSpaces.h TargetAddressSpaces.cc \
+                 LLVMUtils.cc LLVMUtils.h \
+                 VariableUniformityAnalysis.h VariableUniformityAnalysis.cc \
+                 AutomaticLocals.cc
 
 if USE_LLVM_API
 libllvmpasses_la_SOURCES = ${PASSES_SOURCES}
