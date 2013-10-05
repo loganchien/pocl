@@ -1044,12 +1044,13 @@ initialize ( ) {
     # search alternate m4 dirs #
     ############################
     SEARCH_DIRS=""
-    for dir in m4 ; do
-	if [ -d $dir ] ; then
-	    $VERBOSE_ECHO "Found extra aclocal search directory: $dir"
-	    SEARCH_DIRS="$SEARCH_DIRS -I $dir"
-	fi
-    done
+# FIXME: The "-I m4" does not support recursive autoreconf.
+#    for dir in m4 ; do
+#	if [ -d $dir ] ; then
+#	    $VERBOSE_ECHO "Found extra aclocal search directory: $dir"
+#	    SEARCH_DIRS="$SEARCH_DIRS -I $dir"
+#	fi
+#    done
 
     ######################################
     # remove any previous build products #
