@@ -150,7 +150,6 @@ LLVM_PROG([CLANG], [clang], [Program to compile kernels to bytecode])
 LLVM_PROG_WARN([CLANGXX], [clang++])
 
 LLVM_PROG([OPT], [opt], [LLVM optimizer])
-LLVM_PROG([LLVM_OPT], [opt], [LLVM optimizer])
 LLVM_PROG([LLC], [llc], [LLVM static compiler])
 LLVM_PROG([LLVM_AS], [llvm-as], [LLVM assembler])
 LLVM_PROG([LLVM_AR], [llvm-ar], [LLVM archiver])

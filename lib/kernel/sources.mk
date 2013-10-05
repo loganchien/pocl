@@ -216,4 +216,4 @@ CLEANFILES = kernel-${KERNEL_TARGET}.bc ${notdir ${OBJ}}
 # Optimize the bitcode library to speed up optimization times for the
 # OpenCL kernels
 kernel-${KERNEL_TARGET}.bc: ${OBJ}
-	@LLVM_LINK@ ${notdir $^} -o - | @LLVM_OPT@ ${KERNEL_LIB_OPT_FLAGS} -O3 -o $@
+	@LLVM_LINK@ ${notdir $^} -o - | @OPT@ ${KERNEL_LIB_OPT_FLAGS} -O3 -o $@
