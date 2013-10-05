@@ -239,11 +239,3 @@ AC_SUBST([LD_FLAGS_BIN])
 AC_CONFIG_FILES([Makefile])
 
 AC_OUTPUT
-
-
-#Print a summary of selected options:
-echo
-echo =======================================================================
-echo
-echo Using LLVM version $LLVM_VERSION from $($LLVM_CONFIG --prefix)
-echo
