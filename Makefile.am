@@ -73,13 +73,15 @@ install-paths.h:
 		mv $@.new $@ ;\
 	fi
 
-.PHONY: build-llvmopencl
-build-llvmopencl:
-	mkdir -p $(abs_builddir)/lib/build-llvmopencl
-	(cd $(abs_builddir)/lib/build-llvmopencl; \
-         $(abs_srcdir)/lib/llvmopencl/configure; \
-         make -j4)
-
 if IS_CROSS_COMPILING
-all: build-llvmopencl
+# llvmopencl.so is a cross compiling tool, and should be built on build machine.
+
+LLVMOPENCL_RECURSIVE_TARGETS := all-build-llvmopencl clean-build-llvmopencl
+.PHONY: $(LLVMOPENCL_RECURSIVE_TARGETS)
+$(LLVMOPENCL_RECURSIVE_TARGETS):
+	$(MAKE) $(AM_MAKEFLAGS) -C lib/build-llvmopencl \
+		$(@:-build-llvmopencl=)
+
+all: all-build-llvmopencl
+clean: clean-build-llvmopencl
 endif

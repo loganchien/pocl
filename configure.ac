@@ -51,15 +51,6 @@ case $host_os in
          ;;
 esac
 
-# check for cross compiling
-AM_CONDITIONAL([IS_CROSS_COMPILING], [test x$host != x$build])
-
-if test x$host == x$build; then
-    AC_SUBST([llvmopencl_dir], ["llvmopencl"])
-else
-    AC_SUBST([llvmopencl_dir], ["build-llvmopencl"])
-fi
-
 # check for tools
 PKG_PROG_PKG_CONFIG
 
@@ -168,6 +159,52 @@ AC_ARG_ENABLE([region-allocator],
  [Do not use a custom OpenCL optimized region-based memory allocator but allocate buffers with malloc directly.])],
 [],
 [AC_DEFINE([CUSTOM_BUFFER_ALLOCATOR], [], "Use a custom buffer allocator")])
+
+
+####################################################################
+# Cross compiling support
+
+# check for cross compiling
+AM_CONDITIONAL([IS_CROSS_COMPILING], [test x$host != x$build])
+
+# llvmopencl should be built on both build machine and host machine
+if test x$host == x$build; then
+    AC_SUBST([llvmopencl_dir], ["llvmopencl"])
+else
+    AC_SUBST([llvmopencl_dir], ["build-llvmopencl"])
+
+    # llvmopencl.so build directory (for build machine)
+    llvmopencl_builddir="lib/$llvmopencl_dir"
+    if test -z "$builddir"; then
+        llvmopencl_builddir="$llvmopencl_builddir"
+    else
+        llvmopencl_builddir="$builddir/$llvmopencl_builddir"
+    fi
+
+    llvmopencl_srcdir_prefix=`echo "$llvmopencl_builddir" | \
+                              sed 's|^\.[[\\/]]||'`
+    llvmopencl_srcdir_prefix=`echo "/$llvmopencl_srcdir_prefix" | \
+                              sed 's|/[[^\\/]]*|/..|g;s|/||'`
+
+    # llvmopencl.so source directory (w.r.t. $llvmopencl_builddir)
+    llvmopencl_srcdir="lib/llvmopencl"
+    if test -z "$srcdir"; then
+        llvmopencl_srcdir="$llvmopencl_srcdir_prefix/$llvmopencl_srcdir"
+    else
+        llvmopencl_srcdir="$llvmopencl_srcdir_prefix/$srcdir/$llvmopencl_srcdir"
+    fi
+
+    # configure llvmopencl.so (host should be set to $build)
+    mkdir -p "$llvmopencl_builddir"
+    popdir=`pwd`
+    cd "$llvmopencl_builddir"
+    echo "=== configuring in lib/build-llvmopencl (`pwd`)"
+    eval "$llvmopencl_srcdir/configure" $ac_configure_args \
+        --build=$build --host=$build --prefix=`pwd`/.outs \
+        LLVM_CONFIG=llvm-config
+    cd "$popdir"
+fi
+
 
 ####################################################################
 # Manage optional testsuites
