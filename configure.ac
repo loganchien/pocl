@@ -76,11 +76,24 @@ LT_INIT
 # The extra LDFLAGS that must be given to link final binaries against pocl
 LD_FLAGS_BIN=""
 
+
+AC_ARG_ENABLE([region-allocator],
+  [AS_HELP_STRING([--disable-region-allocator],
+  [Do not use a custom OpenCL optimized region-based memory allocator but allocate buffers with malloc directly.])],
+  [],
+  [AC_DEFINE([CUSTOM_BUFFER_ALLOCATOR], [], "Use a custom buffer allocator")])
+
+
 ###################################################
 # LLVM configuration
 #
+
 AC_ARG_VAR([LLVM_CONFIG], [Program used to retrieve LLVM options and binaries])
-AC_PATH_PROGS([LLVM_CONFIG], [llvm-config llvm-config-3.3 llvm-config33 llvm-config-3.4 llvm-config34 llvm-config-3.2 llvm-config32 ])
+AC_PATH_PROGS([LLVM_CONFIG],
+              [llvm-config \
+               llvm-config-3.3 llvm-config33 \
+               llvm-config-3.4 llvm-config34 \
+               llvm-config-3.2 llvm-config32])
 test -z "$LLVM_CONFIG" && AC_MSG_FAILURE([no llvm-config found in \$PATH])
 
 LLVM_VERSION=`$LLVM_CONFIG --version`
@@ -90,23 +103,20 @@ LLVM_LIBDIR=`$LLVM_CONFIG --libdir`
 AC_SUBST([LLVM_VERSION], [$LLVM_VERSION])
 
 case "$LLVM_VERSION" in
-     3.2*)
-     AC_DEFINE([LLVM_3_2], [], "Using LLVM 3.2")
-   ;;
-     3.3*)
-     AC_DEFINE([LLVM_3_3], [], "Using LLVM 3.3 RC")
-   ;;
-     3.4*)
-     AC_DEFINE([LLVM_3_4], [], "Using LLVM svn (upcoming 3.4)")
-     AC_DEFINE([LLVM_SVN], [], "Using LLVM svn (upcoming 3.4)")
-   ;;
-     *)
-   AC_MSG_ERROR(
-   [
-Unsupported LLVM version. Please use LLVM 3.2 or later.
-   ])
-   LLVM_VERSION=
-   ;;
+  3.2*)
+    AC_DEFINE([LLVM_3_2], [], "Using LLVM 3.2")
+    ;;
+  3.3*)
+    AC_DEFINE([LLVM_3_3], [], "Using LLVM 3.3 RC")
+    ;;
+  3.4*)
+    AC_DEFINE([LLVM_3_4], [], "Using LLVM svn (upcoming 3.4)")
+    AC_DEFINE([LLVM_SVN], [], "Using LLVM svn (upcoming 3.4)")
+    ;;
+  *)
+    AC_MSG_ERROR([Unsupported LLVM version. Please use LLVM 3.2 or later.])
+    LLVM_VERSION=
+    ;;
 esac
 
 
@@ -146,19 +156,209 @@ fi
 
 AC_SUBST([LLVM_LIBS])
 
+# Check LLVM RTTI option
 LLVM_RTTI_CHECK=$($LLVM_CONFIG --cxxflags | grep -i "\-fno-rtti")
-
 if test x"$LLVM_RTTI_CHECK" != x; then
-AC_MSG_WARN([Your LLVM was not built with RTTI.
+  AC_MSG_WARN([Your LLVM was not built with RTTI.
 You should rebuild LLVM with 'make REQUIRES_RTTI=1'.
 See the INSTALL file for more information.])
 fi
 
-AC_ARG_ENABLE([region-allocator],
-[AS_HELP_STRING([--disable-region-allocator],
- [Do not use a custom OpenCL optimized region-based memory allocator but allocate buffers with malloc directly.])],
-[],
-[AC_DEFINE([CUSTOM_BUFFER_ALLOCATOR], [], "Use a custom buffer allocator")])
+# Detect the LLVM program executables
+AC_DEFUN([LLVM_PROG], [
+  AC_ARG_VAR([$1], [$3])
+  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$LLVM_BINDIR:$PATH])
+  AS_IF([test -z "$$1"], [
+    AC_MSG_FAILURE([cannot find LLVM binary '$2' in '$LLVM_BINDIR' nor \$PATH])
+  ])
+])
+
+AC_DEFUN([LLVM_PROG_WARN], [
+  AC_ARG_VAR([$1], [$3])
+  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$LLVM_BINDIR:$PATH])
+  AS_IF([test -z "$$1"], [
+    AC_MSG_WARN([cannot find LLVM binary '$2' in '$LLVM_BINDIR' nor \$PATH])
+  ])
+])
+
+LLVM_PROG([CLANG], [clang], [Program to compile kernels to bytecode])
+# Check for a functioning clang++. It is needed to compile faster math
+# builtins from vecmathlib.
+LLVM_PROG_WARN([CLANGXX], [clang++])
+AM_CONDITIONAL([CLANGXX_AVAILABLE], test ! -z $CLANGXX)
+
+LLVM_PROG([OPT], [opt], [LLVM optimizer])
+LLVM_PROG([LLVM_OPT], [opt], [LLVM optimizer])
+LLVM_PROG([LLC], [llc], [LLVM static compiler])
+LLVM_PROG([LLVM_AS], [llvm-as], [LLVM assembler])
+LLVM_PROG([LLVM_AR], [llvm-ar], [LLVM archiver])
+LLVM_PROG([LLVM_LINK], [llvm-link], [LLVM IR linker])
+
+# $CLANG and $LLC are needed by config/xclang
+AC_DEFINE_UNQUOTED([CLANG], ["$CLANG"], [clang executable.])
+AC_DEFINE_UNQUOTED([LLC], ["$LLC"], [LLVM compiler executable.])
+export CLANG
+export LLC
+
+# Checks for programs.
+if test ! -z "$CLANGXX"; then
+  # Test that clang++ can compile a simple C++ program.
+  AC_LANG([C++])
+
+  old_CXX=$CXX
+  CXX=$CLANGXX
+  old_CXXFLAGS=$CXXFLAGS
+  CXXFLAGS=$CLANGXX_FLAGS
+
+  # The namespace std { class type_info; } is needed for older libstdc++
+  # versions such as the 4.4 in Debian 6.0.
+  # http://lists.cs.uiuc.edu/pipermail/cfe-dev/2011-February/013207.html
+  AC_MSG_CHECKING([that clang++ works])
+  AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+      [[ namespace std { class type_info; }
+         #include <iostream> ]],
+      [[ std::cout << "Hello clang++ world!" << std::endl ]]
+    )],
+    [AC_MSG_RESULT(yes)
+     AC_DEFINE_UNQUOTED([CLANGXX], ["$CLANGXX"], [clang++ executable])
+     AC_DEFINE_UNQUOTED([CLANGXX_FLAGS], ["$CLANGXX_FLAGS"], [clang++ compiler flags])
+    ],
+    [AC_MSG_RESULT(no)
+     CLANGXX=""
+     CLANGXX_FLAGS=""])
+
+  CXX=$old_CXX
+  CXXFLAGS=$old_CXXFLAGS
+fi
+
+# Targets.
+# This is the target architecture of the basic and pthreads devices.
+# These always are the same arch as host (in current pocl implementation).
+# Also, this is the autoconf "host".
+# We have:
+# target triplet: the OCL device target triple
+# kernel dir: where to search for the ocl lib kernel
+HOST_LLC_FLAGS="-relocation-model=pic"
+HOST_LD_FLAGS="-shared"
+
+case $host_os in
+  darwin* )
+    # MacOS ld outputs useless warnings like
+    # ld: warning: -macosx_version_min not specificed, assuming 10.7
+    # suppress them with -w.
+    HOST_LD_FLAGS="-bundle -w"
+    ICD_LD_FLAGS="-single_module"
+    ;;
+  *gnu )
+    ICD_LD_FLAGS="-Wl,-Bsymbolic"
+    ;;
+esac
+AC_SUBST([ICD_LD_FLAGS])
+case $host_cpu in
+  armv7l)
+    AC_MSG_NOTICE([using the ARM optimized kernel lib for the native device])
+    # check for gnueabihf, and set clang target accordingly
+    case $host in
+      armv7l*gnueabihf)
+         OCL_KERNEL_TARGET="armv7l-unknown-linux-gnueabihf"
+         HOST_LLC_FLAGS="$HOST_LLC_FLAGS -float-abi=hard";;
+      *)
+         #armv7l seems a popular host_cpu in distros. Clang uses "armv7", though
+         OCL_KERNEL_TARGET="armv7";;
+    esac
+
+    # Assume -lm should not be used. TODO: add an embedded math lib
+    # for compiling kernels for ARM envs without usable math libs.
+    HOST_CLANG_FLAGS="$HOST_CLANG_FLAGS -target $OCL_KERNEL_TARGET -mfloat-abi=hard"
+    kernel_dir="arm"
+    CL_DEVICE_ADDRESS_BITS=32
+    ;;
+  amd64|x86_64)
+    AC_MSG_NOTICE([using the x86_64 optimized kernel lib for the native device])
+    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
+    OCL_KERNEL_TARGET=$host
+    kernel_dir="x86_64"
+    CL_DEVICE_ADDRESS_BITS=64
+    ;;
+  i?86)
+    AC_MSG_NOTICE([using the x86 32bit optimized kernel lib for the native device])
+    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
+    OCL_KERNEL_TARGET=$host
+    kernel_dir="x86_64"
+    CL_DEVICE_ADDRESS_BITS=32
+    ;;
+
+  tce)
+    AC_MSG_NOTICE([using the TCE optimized kernel lib for the native device])
+    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
+    kernel_dir="tce"
+    ;;
+
+  powerpc*)
+    #on all tested operating systems with PowerPC, the processor is 64bit,
+    #but the operating system is 32 bit. Therefore, when on powerpc, always build
+    #for 32 bit ppc. If this does not work for you ... patches welcome.
+    AC_MSG_NOTICE([using the ppc64 optimized kernel lib for the native device])
+    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
+    kernel_dir="powerpc"
+    OCL_KERNEL_TARGET="powerpc-unknown-linux-gnu"
+    CL_DEVICE_ADDRESS_BITS=32
+    #TODO: not all PowerPCs have Altivec?
+    HOST_LLC_FLAGS="$HOST_LLC_FLAGS -mattr=altivec"
+    ;;
+  *)
+    AC_MSG_ERROR([unknown/unsupported host $host])
+    ;;
+esac
+OCL_TARGETS=$kernel_dir
+
+
+AC_DEFINE_UNQUOTED([KERNEL_DIR], "$kernel_dir",
+                   [Use the libkernel from lib/kernel/$KERNEL_DIR/])
+
+AC_SUBST([TARGET], [$target])
+AC_DEFINE_UNQUOTED([TARGET], "$target", [The target triple.])
+AC_SUBST([TARGET_CPU], [$target_cpu])
+AC_ARG_VAR([TARGET_CLANG_FLAGS],
+           [Parameters to for target compilation.])
+AC_DEFINE_UNQUOTED([TARGET_CLANG_FLAGS],
+                   ["$TARGET_CLANG_FLAGS"],
+                   [Parameters to for target compilation.])
+AC_SUBST([TARGET_LLC_FLAGS])
+AC_DEFINE_UNQUOTED([TARGET_LLC_FLAGS],
+                   ["$TARGET_LLC_FLAGS"],
+                   [Parameters to llc for code generation in the target.])
+
+AC_SUBST([HOST], [$host])
+AC_DEFINE_UNQUOTED([HOST], "$host", [The host triple.])
+AC_SUBST([HOST_CPU], [$host_cpu])
+AC_DEFINE_UNQUOTED([HOST_CPU], ["$host_cpu"], [The host CPU type.])
+
+AC_SUBST([OCL_KERNEL_TARGET],[$OCL_KERNEL_TARGET])
+AC_DEFINE_UNQUOTED([OCL_KERNEL_TARGET], ["$OCL_KERNEL_TARGET"],
+                   [The kernel target triplet.])
+
+AC_SUBST([POCL_DEVICE_ADDRESS_BITS], [$CL_DEVICE_ADDRESS_BITS])
+AC_DEFINE_UNQUOTED([POCL_DEVICE_ADDRESS_BITS],
+                   [$CL_DEVICE_ADDRESS_BITS],
+                   [Value based on host processor, for basic and pthreads devices])
+
+AC_ARG_VAR([HOST_CLANG_FLAGS],
+           [Parameters to for host compilation.])
+AC_DEFINE_UNQUOTED([HOST_CLANG_FLAGS],
+                   ["$HOST_CLANG_FLAGS"],
+                   [Parameters to for host compilation.])
+
+AC_SUBST([HOST_LLC_FLAGS])
+AC_DEFINE_UNQUOTED([HOST_LLC_FLAGS],
+                   ["$HOST_LLC_FLAGS"],
+                   [Parameters to llc for code generation in the host.])
+
+AC_SUBST([HOST_LD_FLAGS])
+AC_DEFINE_UNQUOTED([HOST_LD_FLAGS],
+                   ["$HOST_LD_FLAGS"],
+                   [Parameter to compiler to generate loadable module.])
 
 
 ####################################################################
@@ -211,9 +411,10 @@ fi
 
 # Option to choose external testsuites
 AC_ARG_ENABLE([testsuites],
-	      [AS_HELP_STRING([--enable-testsuites=suite1,suite2,...],
-          [choose enabled external project testsuites (all,opencl-book-samples,ViennaCL,Rodinia,Parboil,amd,VexCL,Piglit])],
-	      [],[enable_testsuites=check])
+              [AS_HELP_STRING([--enable-testsuites=suite1,suite2,...],
+                              [choose enabled external project testsuites (all,opencl-book-samples,ViennaCL,Rodinia,Parboil,amd,VexCL,Piglit)])],
+              [],
+              [enable_testsuites=check])
 
 enable_testsuite_opencl_book_samples=no
 enable_testsuite_viennacl=no
@@ -547,29 +748,6 @@ AC_SUBST([OPENCL_EXTLIBS])
 #AC_LANG([C++])
 
 
-# Checks for libraries.
-#old_LDFLAGS="$LDFLAGS"
-#LDFLAGS="$LDFLAGS `$LLVM_CONFIG --ldflags`"
-#old_LIBS="$LIBS"
-#LIBS=
-#AC_SEARCH_LIBS([LLVMInitializeTransformUtils],
-#               [LLVM-3.0 LLVMTransformUtils],
-#	       , ,
-#               [`$LLVM_CONFIG --libs transformutils`])
-#AC_SUBST([LIBS_LLVMTRANSFORMUTILS], ["$LIBS"])
-#test "$ac_cv_search_LLVMInitializeTransformUtils" = "no" && \
-#  AC_MSG_FAILURE([Unable to link with LLVM libraries])
-#LIBS=
-#AC_SEARCH_LIBS([LLVMInitializeAnalysis],
-#               [LLVM-3.0 LLVMAnalysis],
-#	       , ,
-#               [`$LLVM_CONFIG --libs analysis`])
-#AC_SUBST([LIBS_LLVMANALYSIS], ["$LIBS"])
-#test "$ac_cv_search_LLVMInitializeAnalysis" = "no" && \
-#  AC_MSG_FAILURE([Unable to link with LLVM libraries])
-#LIBS="$old_LIBS"
-#LDFLAGS="$old_LDFLAGS"
-
 # Option to install OpenCL header files
 # By default, do not install them unless none are found in the system include directories
 AC_ARG_ENABLE([install-opencl-headers],
@@ -616,25 +794,24 @@ LIBS="$old_LIBS"
 AC_MSG_NOTICE([Starting OpenCL runtime build system checks])
 
 AC_ARG_ENABLE([debug],
-AS_HELP_STRING([--enable-debug], [enable debug build of pocl (default is no)]),
-[debug=$enableval],
-[debug=no])
-if test "x$debug" = "xno"
-then
-	CXXFLAGS="$CXXFLAGS"
+AS_HELP_STRING([--enable-debug],
+               [enable debug build of pocl (default is no)]),
+               [debug=$enableval],
+               [debug=no])
+if test "x$debug" = "xno"; then
+  CXXFLAGS="$CXXFLAGS"
 else
-	CFLAGS="$CXXFLAGS -O0 -g"
-	CXXFLAGS="$CXXFLAGS -O0 -g"
+  CFLAGS="$CXXFLAGS -O0 -g"
+  CXXFLAGS="$CXXFLAGS -O0 -g"
 fi
 
 be_pedantic="no"
 AC_ARG_ENABLE([pedantic],
               [AS_HELP_STRING([--enable-pedantic], [Compile host library with stricter compiler flags.])],
               [be_pedantic="yes"])
-if test "$be_pedantic" = "yes"
-then
-	CXXFLAGS="$CXXFLAGS -Wno-unused-result -Werror"
-	CFLAGS="$CFLAGS -Wno-unused-result -Werror"
+if test "$be_pedantic" = "yes"; then
+  CXXFLAGS="$CXXFLAGS -Wno-unused-result -Werror"
+  CFLAGS="$CFLAGS -Wno-unused-result -Werror"
 fi
 
 AC_CHECK_HEADERS([GL/gl.h OpenGL/OpenGL.h], [opengl_found="ok"; break])
@@ -648,217 +825,23 @@ PKG_CHECK_MODULES([GLEW], [glew],
   ],
   [AC_MSG_NOTICE([libGLEW not found. A few tests will not work])])
 
-# Checks for programs.
-AC_DEFUN([LLVM_PROG], [
-  AC_ARG_VAR([$1], [$3])
-  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$LLVM_BINDIR:$PATH])
-  AS_IF([test -z "$$1"], [
-    AC_MSG_FAILURE([cannot find LLVM binary '$2' in '$LLVM_BINDIR' nor \$PATH])
-  ])
-])
 
-AC_DEFUN([LLVM_PROG_WARN], [
-  AC_ARG_VAR([$1], [$3])
-  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$LLVM_BINDIR:$PATH])
-  AS_IF([test -z "$$1"], [
-    AC_MSG_WARN([cannot find LLVM binary '$2' in '$LLVM_BINDIR' nor \$PATH])
-  ])
-])
-
-LLVM_PROG([CLANG], [clang], [Program to compile kernels to bytecode])
-
-# Check for a functioning clang++. It is needed to compile faster math
-# builtins from vecmathlib.
-LLVM_PROG_WARN([CLANGXX], [clang++])
+# CLFLAGS
+AC_ARG_VAR([CLFLAGS], [Flags to be used when compiling CL sources])
+AC_DEFINE_UNQUOTED([CLFLAGS], ["$CLFLAGS"], [CL compiler flags.])
 
 if test ! -z "$CLANGXX"; then
-# Test that clang++ can compile a simple C++ program.
-
-#: ${CLANGXX_FLAGS:="-std=c++11"}
-
-AC_LANG([C++])
-
-old_CXX=$CXX
-CXX=$CLANGXX
-old_CXXFLAGS=$CXXFLAGS
-CXXFLAGS=$CLANGXX_FLAGS
-
-# The namespace std { class type_info; } is needed for older libstdc++
-# versions such as the 4.4 in Debian 6.0.
-# http://lists.cs.uiuc.edu/pipermail/cfe-dev/2011-February/013207.html
-AC_MSG_CHECKING([that clang++ works])
-AC_COMPILE_IFELSE(
-  [AC_LANG_PROGRAM(
-    [[ namespace std { class type_info; }
-       #include <iostream> ]],
-    [[ std::cout << "Hello clang++ world!" << std::endl ]]
-  )],
-  [AC_MSG_RESULT(yes)
-   # The vecmathlib repo should be checked out under lib/kernel
-   # and the pocl directory should have the generated files in place.
-   if test -r $srcdir/lib/kernel/vecmathlib/vecmathlib.h; then
-      use_vecmathlib=yes
-   fi
-   AC_DEFINE_UNQUOTED([CLANGXX], ["$CLANGXX"], [clang++ executable])
-   AC_DEFINE_UNQUOTED([CLANGXX_FLAGS], ["$CLANGXX_FLAGS"], [clang++ compiler flags])
-  ],
-  [AC_MSG_RESULT(no)
-   CLANGXX=""
-   CLANGXX_FLAGS=""])
-
-CXX=$old_CXX
-CXXFLAGS=$old_CXXFLAGS
-
+  # The vecmathlib repo should be checked out under lib/kernel
+  # and the pocl directory should have the generated files in place.
+  if test -r $srcdir/lib/kernel/vecmathlib/vecmathlib.h; then
+    use_vecmathlib=yes
+  fi
 fi
-
-AM_CONDITIONAL([CLANGXX_AVAILABLE], test ! -z $CLANGXX)
 AM_CONDITIONAL([USE_VECMATHLIB], test ! -z "$use_vecmathlib")
 
 if test x"$use_vecmathlib" = xyes; then
   AC_DEFINE([USE_VECMATHLIB], [], "Use vecmathlib if available for the target.")
 fi
-
-AC_ARG_VAR([CLFLAGS], [Flags to be used when compiling CL sources])
-
-AC_DEFINE_UNQUOTED([CLANG], ["$CLANG"], [clang executable.])
-AC_DEFINE_UNQUOTED([CLFLAGS], ["$CLFLAGS"], [CL compiler flags.])
-
-LLVM_PROG([OPT], [opt], [LLVM optimizer])
-LLVM_PROG([LLVM_OPT], [opt], [LLVM optimizer])
-LLVM_PROG([LLC], [llc], [LLVM static compiler])
-LLVM_PROG([LLVM_AS], [llvm-as], [LLVM assembler])
-LLVM_PROG([LLVM_AR], [llvm-ar], [LLVM archiver])
-LLVM_PROG([LLVM_LINK], [llvm-link], [LLVM IR linker])
-
-
-# $CLANG and $LLC are needed by config/xclang
-export CLANG
-export LLC
-
-AC_DEFINE_UNQUOTED([LLC], ["$LLC"], [LLVM compiler executable.])
-
-# Targets.
-# This is the target architecture of the basic and pthreads devices.
-# These always are the same arch as host (in current pocl implementation).
-# Also, this is the autoconf "host".
-# We have:
-# target triplet: the OCL device target triple
-# kernel dir: where to search for the ocl lib kernel
-HOST_LLC_FLAGS="-relocation-model=pic"
-HOST_LD_FLAGS="-shared"
-
-case $host_os in
-  darwin* )
-    # MacOS ld outputs useless warnings like
-    # ld: warning: -macosx_version_min not specificed, assuming 10.7
-    # suppress them with -w.
-    HOST_LD_FLAGS="-bundle -w"
-    ICD_LD_FLAGS="-single_module"
-    ;;
-  *gnu )
-    ICD_LD_FLAGS="-Wl,-Bsymbolic"
-    ;;
-esac
-AC_SUBST([ICD_LD_FLAGS])
-case $host_cpu in
-  armv7l)
-    AC_MSG_NOTICE([using the ARM optimized kernel lib for the native device])
-    # check for gnueabihf, and set clang target accordingly
-    case $host in
-      armv7l*gnueabihf)
-         OCL_KERNEL_TARGET="armv7l-unknown-linux-gnueabihf"
-         HOST_LLC_FLAGS="$HOST_LLC_FLAGS -float-abi=hard";;
-      *)
-         #armv7l seems a popular host_cpu in distros. Clang uses "armv7", though
-         OCL_KERNEL_TARGET="armv7";;
-    esac
-
-    # Assume -lm should not be used. TODO: add an embedded math lib
-    # for compiling kernels for ARM envs without usable math libs.
-    HOST_CLANG_FLAGS="$HOST_CLANG_FLAGS -target $OCL_KERNEL_TARGET -mfloat-abi=hard"
-    kernel_dir="arm"
-    CL_DEVICE_ADDRESS_BITS=32
-    ;;
-  amd64|x86_64)
-    AC_MSG_NOTICE([using the x86_64 optimized kernel lib for the native device])
-    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
-    OCL_KERNEL_TARGET=$host
-    kernel_dir="x86_64"
-    CL_DEVICE_ADDRESS_BITS=64
-    ;;
-  i?86)
-    AC_MSG_NOTICE([using the x86 32bit optimized kernel lib for the native device])
-    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
-    OCL_KERNEL_TARGET=$host
-    kernel_dir="x86_64"
-    CL_DEVICE_ADDRESS_BITS=32
-    ;;
-
-  tce)
-    AC_MSG_NOTICE([using the TCE optimized kernel lib for the native device])
-    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
-    kernel_dir="tce"
-    ;;
-
-  powerpc*)
-    #on all tested operating systems with PowerPC, the processor is 64bit,
-    #but the operating system is 32 bit. Therefore, when on powerpc, always build
-    #for 32 bit ppc. If this does not work for you ... patches welcome.
-    AC_MSG_NOTICE([using the ppc64 optimized kernel lib for the native device])
-    HOST_LD_FLAGS="$HOST_LD_FLAGS -lm"
-    kernel_dir="powerpc"
-    OCL_KERNEL_TARGET="powerpc-unknown-linux-gnu"
-    CL_DEVICE_ADDRESS_BITS=32
-    #TODO: not all PowerPCs have Altivec?
-    HOST_LLC_FLAGS="$HOST_LLC_FLAGS -mattr=altivec"
-    ;;
-  *)
-    AC_MSG_ERROR([unknown/unsupported host $host])
-    ;;
-esac
-OCL_TARGETS=$kernel_dir
-
-
-AC_DEFINE_UNQUOTED([KERNEL_DIR], "$kernel_dir", [Use the libkernel from lib/kernel/$KERNEL_DIR/])
-
-AC_SUBST([TARGET], [$target])
-AC_DEFINE_UNQUOTED([TARGET], "$target", [The target triple.])
-AC_SUBST([TARGET_CPU], [$target_cpu])
-AC_ARG_VAR([TARGET_CLANG_FLAGS],
-           [Parameters to for target compilation.])
-AC_DEFINE_UNQUOTED([TARGET_CLANG_FLAGS],
-                   ["$TARGET_CLANG_FLAGS"],
-                   [Parameters to for target compilation.])
-AC_SUBST([TARGET_LLC_FLAGS])
-AC_DEFINE_UNQUOTED([TARGET_LLC_FLAGS],
-                   ["$TARGET_LLC_FLAGS"],
-                   [Parameters to llc for code generation in the target.])
-
-AC_SUBST([HOST], [$host])
-AC_DEFINE_UNQUOTED([HOST], "$host", [The host triple.])
-AC_SUBST([HOST_CPU], [$host_cpu])
-AC_DEFINE_UNQUOTED([HOST_CPU], ["$host_cpu"], [The host CPU type.])
-AC_SUBST([OCL_KERNEL_TARGET],[$OCL_KERNEL_TARGET])
-AC_DEFINE_UNQUOTED([OCL_KERNEL_TARGET], ["$OCL_KERNEL_TARGET"], [The kernel target triplet.])
-AC_ARG_VAR([HOST_CLANG_FLAGS],
-           [Parameters to for host compilation.])
-AC_DEFINE_UNQUOTED([HOST_CLANG_FLAGS],
-                   ["$HOST_CLANG_FLAGS"],
-                   [Parameters to for host compilation.])
-AC_SUBST([HOST_LLC_FLAGS])
-AC_DEFINE_UNQUOTED([HOST_LLC_FLAGS],
-                   ["$HOST_LLC_FLAGS"],
-                   [Parameters to llc for code generation in the host.])
-
-AC_SUBST([HOST_LD_FLAGS])
-AC_DEFINE_UNQUOTED([HOST_LD_FLAGS],
-                   ["$HOST_LD_FLAGS"],
-                   [Parameter to compiler to generate loadable module.])
-
-AC_SUBST([POCL_DEVICE_ADDRESS_BITS], [$CL_DEVICE_ADDRESS_BITS])
-AC_DEFINE_UNQUOTED([POCL_DEVICE_ADDRESS_BITS],
-                   [$CL_DEVICE_ADDRESS_BITS],
-                   [Value based on host processor, for basic and pthreads devices])
 
 
 ####################################################################
@@ -1054,20 +1037,6 @@ AS_IF([test $ac_cv_alignof_float16 -gt $ac_cv_alignof_double16],
       [AC_DEFINE([MAX_EXTENDED_ALIGNMENT], [ALIGNOF_FLOAT16], [Defined to greatest expected alignment for extended types, in bytes.])],
       [AC_DEFINE([MAX_EXTENDED_ALIGNMENT], [ALIGNOF_DOUBLE16], [Defined to greatest expected alignment for extended types, in bytes.])])
 
-# Seems to be unused
-#AC_MSG_CHECKING([whether __fp16 can be converted to float])
-#AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[__fp16 x; float y;]],
-#                                   [[y=x]])],
-#                  [
-#                    AC_MSG_RESULT([yes])
-#                    AC_DEFINE_UNQUOTED([CONVERT___FP16_FLOAT], 1, [Define to 1 if __fp16 can be converted to float.])
-#                  ],
-#                  [
-#                    AC_MSG_RESULT([no])
-#                    AC_DEFINE_UNQUOTED([CONVERT___FP16_FLOAT], 0, [Define to 1 if __fp16 can be converted to float.])
-#                  ]
-#                 )
-
 CC="$old_CC"
 CPPFLAGS="$old_CPPFLAGS"
 CFLAGS="$old_CFLAGS"
@@ -1191,4 +1160,3 @@ fi
 echo Enabled device drivers: $OCL_DRIVERS
 echo Enabled testsuites: $POAT_TESTSUITES
 echo
-
