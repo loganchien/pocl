@@ -34,6 +34,7 @@ do_subst = sed -e 's,[@]abs_top_srcdir[@],$(abs_top_srcdir),g'		\
                -e 's,[@]pkglibexecdir[@],$(pkglibexecdir),g'		\
                -e 's,[@]llvmopencl_dir[@],$(llvmopencl_dir),g'		\
                -e 's,[@]CLANG[@],$(CLANG),g'				\
+               -e 's,[@]CLANG_FOR_BUILD[@],$(CLANG_FOR_BUILD),g'	\
                -e 's,[@]CLFLAGS[@],$(CLFLAGS),g'			\
                -e 's,[@]TARGET[@],$(TARGET),g'	\
                -e 's,[@]TARGET_CLANG_FLAGS[@],$(TARGET_CLANG_FLAGS),g'	\
@@ -41,8 +42,11 @@ do_subst = sed -e 's,[@]abs_top_srcdir[@],$(abs_top_srcdir),g'		\
                -e 's,[@]HOST_CLANG_FLAGS[@],$(HOST_CLANG_FLAGS),g'	\
                -e 's,[@]HOST_LD_FLAGS[@],$(HOST_LD_FLAGS),g'		\
                -e 's,[@]OPT[@],$(OPT),g'				\
+               -e 's,[@]OPT_FOR_BUILD[@],$(OPT_FOR_BUILD),g'		\
                -e 's,[@]LLVM_LINK[@],$(LLVM_LINK),g'			\
+               -e 's,[@]LLVM_LINK_FOR_BUILD[@],$(LLVM_LINK_FOR_BUILD),g'\
                -e 's,[@]LLC[@],$(LLC),g' \
+               -e 's,[@]LLC_FOR_BUILD[@],$(LLC_FOR_BUILD),g'		\
                -e 's,[@]LLVM_VERSION[@],$(LLVM_VERSION),g' 
 
 pocl-build pocl-kernel pocl-workgroup pocl-standalone: %: %.in Makefile ../install-paths.h

@@ -37,8 +37,8 @@ include ../sources.mk
 
 nodist_libkernel_a_SOURCES=$(libkernel_SRCS)
 
-RANLIB = @LLVM_RANLIB@
-AR = @LLVM_AR@
+RANLIB = @LLVM_RANLIB_FOR_BUILD@
+AR = @LLVM_AR_FOR_BUILD@
 
 CLANGFLAGS += -target powerpc64-unknown-linux-gnu
 CLANG_DEFAULT_INCLUDES = -include $(top_builddir)/include/powerpc64/types.h

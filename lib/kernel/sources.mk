@@ -203,17 +203,17 @@ OBJ = $(LKERNEL_SRCS:%=%.bc)
 # Rules to compile the different kernel library source file types into
 # LLVM bitcode
 %.c.bc: %.c @top_builddir@/include/${TARGET_DIR}/types.h
-	@CLANG@ -Xclang -ffake-address-space-map -emit-llvm ${CLFLAGS} ${EXTRA_CLANGFLAGS} -c -target ${KERNEL_TARGET} -o ${notdir $@} -x c $< -include ../../../include/${TARGET_DIR}/types.h
+	@CLANG_FOR_BUILD@ -Xclang -ffake-address-space-map -emit-llvm ${CLFLAGS} ${EXTRA_CLANGFLAGS} -c -target ${KERNEL_TARGET} -o ${notdir $@} -x c $< -include ../../../include/${TARGET_DIR}/types.h
 %.cc.bc: %.cc @top_builddir@/include/${TARGET_DIR}/types.h
-	@CLANGXX@ -Xclang -ffake-address-space-map -fno-exceptions -emit-llvm ${EXTRA_CLANGFLAGS} ${CLANGXX_FLAGS} -c -target ${KERNEL_TARGET} -o ${notdir $@} $< -include ../../../include/${TARGET_DIR}/types.h
+	@CLANGXX_FOR_BUILD@ -Xclang -ffake-address-space-map -fno-exceptions -emit-llvm ${EXTRA_CLANGFLAGS} ${CLANGXX_FLAGS} -c -target ${KERNEL_TARGET} -o ${notdir $@} $< -include ../../../include/${TARGET_DIR}/types.h
 %.cl.bc: %.cl @top_builddir@/include/${TARGET_DIR}/types.h @top_srcdir@/include/_kernel.h
-	@CLANG@ -Xclang -ffake-address-space-map -emit-llvm ${CLFLAGS} ${EXTRA_CLANGFLAGS} -fsigned-char -c -target ${KERNEL_TARGET} -o ${notdir $@} -x cl $< -include ../../../include/${TARGET_DIR}/types.h -include ${abs_top_srcdir}/include/_kernel.h
+	@CLANG_FOR_BUILD@ -Xclang -ffake-address-space-map -emit-llvm ${CLFLAGS} ${EXTRA_CLANGFLAGS} -fsigned-char -c -target ${KERNEL_TARGET} -o ${notdir $@} -x cl $< -include ../../../include/${TARGET_DIR}/types.h -include ${abs_top_srcdir}/include/_kernel.h
 %.ll.bc: %.ll
-	@LLVM_AS@ -o $@ $<
+	@LLVM_AS_FOR_BUILD@ -o $@ $<
 
 CLEANFILES = kernel-${KERNEL_TARGET}.bc ${notdir ${OBJ}}
 
 # Optimize the bitcode library to speed up optimization times for the
 # OpenCL kernels
 kernel-${KERNEL_TARGET}.bc: ${OBJ}
-	@LLVM_LINK@ ${notdir $^} -o - | @OPT@ ${KERNEL_LIB_OPT_FLAGS} -O3 -o $@
+	@LLVM_LINK_FOR_BUILD@ ${notdir $^} -o - | @OPT_FOR_BUILD@ ${KERNEL_LIB_OPT_FLAGS} -O3 -o $@

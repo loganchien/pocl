@@ -70,11 +70,16 @@ CLANG_FLAGS="$CLANG_FLAGS -ffp-contract=off "
 
 preprocessed_file=${output_file}.i
 
+CLANG="@CLANG@"
 # BEGIN REMOVE ONCE INSTALLED
-@CLANG@ ${EXTRA_CPPFLAGS} ${USER_OPTIONS} ${CLANG_FLAGS} @CLFLAGS@ -E -I@abs_top_builddir@ -include @abs_top_builddir@/include/${target_dir}/types.h -include @abs_top_srcdir@/include/_kernel.h -o ${preprocessed_file} -x cl $1
+CLANG="@CLANG_FOR_BUILD@"
+# END REMOVE ONCE INSTALLED
+
+# BEGIN REMOVE ONCE INSTALLED
+"${CLANG}" ${EXTRA_CPPFLAGS} ${USER_OPTIONS} ${CLANG_FLAGS} @CLFLAGS@ -E -I@abs_top_builddir@ -include @abs_top_builddir@/include/${target_dir}/types.h -include @abs_top_srcdir@/include/_kernel.h -o ${preprocessed_file} -x cl $1
 if false ; then
 # END REMOVE ONCE INSTALLED
-@CLANG@ ${EXTRA_CPPFLAGS} ${USER_OPTIONS} ${CLANG_FLAGS} @CLFLAGS@ -E -include @pkgincludedir@/${target_dir}/types.h -include @pkgincludedir@/_kernel.h -o ${preprocessed_file} -x cl $1
+"${CLANG}" ${EXTRA_CPPFLAGS} ${USER_OPTIONS} ${CLANG_FLAGS} @CLFLAGS@ -E -include @pkgincludedir@/${target_dir}/types.h -include @pkgincludedir@/_kernel.h -o ${preprocessed_file} -x cl $1
 # BEGIN REMOVE ONCE INSTALLED
 fi
 # END REMOVE ONCE INSTALLED
@@ -82,5 +87,4 @@ fi
 # Use -fno-builtin to avoid clang producing extra memcpys etc. from
 # kernel loops. Otherwise, it a) ruins wg-vectorization b) causes issues with embedded 
 # devices such as TCE which do not have OS and a system linker.
-@CLANG@ -fblocks -fno-builtin ${CLANG_FLAGS} @CLFLAGS@ -c -emit-llvm -o ${output_file} -x cl ${preprocessed_file}
-
+"${CLANG}" -fblocks -fno-builtin ${CLANG_FLAGS} @CLFLAGS@ -c -emit-llvm -o ${output_file} -x cl ${preprocessed_file}

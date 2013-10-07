@@ -89,16 +89,41 @@ AC_ARG_ENABLE([region-allocator],
 #
 
 AC_ARG_VAR([LLVM_CONFIG], [Program used to retrieve LLVM options and binaries])
-AC_PATH_PROGS([LLVM_CONFIG],
+if test x$build == x$host; then
+  AC_PATH_PROGS([LLVM_CONFIG],
+                [llvm-config \
+                 llvm-config-3.3 llvm-config33 \
+                 llvm-config-3.4 llvm-config34 \
+                 llvm-config-3.2 llvm-config32])
+  test -z "$LLVM_CONFIG" && AC_MSG_FAILURE([no llvm-config found in \$PATH])
+else
+  AC_PATH_PROGS([LLVM_CONFIG],
+                [llvm-config-host \
+                 llvm-config-host-3.3 llvm-config-host33 \
+                 llvm-config-host-3.4 llvm-config-host34 \
+                 llvm-config-host-3.2 llvm-config-host32])
+  test -z "$LLVM_CONFIG" && AC_MSG_FAILURE([no llvm-config-host found in \$PATH])
+fi
+
+AC_PATH_PROGS([LLVM_CONFIG_FOR_BUILD],
               [llvm-config \
                llvm-config-3.3 llvm-config33 \
                llvm-config-3.4 llvm-config34 \
                llvm-config-3.2 llvm-config32])
-test -z "$LLVM_CONFIG" && AC_MSG_FAILURE([no llvm-config found in \$PATH])
+test -z "$LLVM_CONFIG_FOR_BUILD" && \
+  AC_MSG_FAILURE([no llvm-config found in \$PATH])
 
 LLVM_VERSION=`$LLVM_CONFIG --version`
 LLVM_BINDIR=`$LLVM_CONFIG --bindir`
 LLVM_LIBDIR=`$LLVM_CONFIG --libdir`
+
+LLVM_VERSION_FOR_BUILD=`$LLVM_CONFIG_FOR_BUILD --version`
+LLVM_BINDIR_FOR_BUILD=`$LLVM_CONFIG_FOR_BUILD --bindir`
+LLVM_LIBDIR_FOR_BUILD=`$LLVM_CONFIG_FOR_BUILD --libdir`
+
+if test "$LLVM_VERSION" != "$LLVM_VERSION_FOR_BUILD"; then
+  AC_MSG_FAILURE([Different LLVM version are detected on build and host])
+fi
 
 AC_SUBST([LLVM_VERSION], [$LLVM_VERSION])
 
@@ -167,40 +192,72 @@ fi
 # Detect the LLVM program executables
 AC_DEFUN([LLVM_PROG], [
   AC_ARG_VAR([$1], [$3])
-  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$LLVM_BINDIR:$PATH])
+  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$4:$PATH])
   AS_IF([test -z "$$1"], [
-    AC_MSG_FAILURE([cannot find LLVM binary '$2' in '$LLVM_BINDIR' nor \$PATH])
+    AC_MSG_FAILURE([cannot find LLVM binary '$2' in '$4' nor \$PATH])
   ])
 ])
 
 AC_DEFUN([LLVM_PROG_WARN], [
   AC_ARG_VAR([$1], [$3])
-  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$LLVM_BINDIR:$PATH])
+  AC_PATH_PROGS([$1], [$2 $2-$LLVM_VERSION], , [$4:$PATH])
   AS_IF([test -z "$$1"], [
-    AC_MSG_WARN([cannot find LLVM binary '$2' in '$LLVM_BINDIR' nor \$PATH])
+    AC_MSG_WARN([cannot find LLVM binary '$2' in '$4' nor \$PATH])
   ])
 ])
 
-LLVM_PROG([CLANG], [clang], [Program to compile kernels to bytecode])
+# LLVM programs on host machine
+LLVM_PROG([CLANG], [clang],
+          [Program to compile kernels to bytecode],
+          [$LLVM_BINDIR])
 # Check for a functioning clang++. It is needed to compile faster math
 # builtins from vecmathlib.
-LLVM_PROG_WARN([CLANGXX], [clang++])
+LLVM_PROG_WARN([CLANGXX], [clang++],
+               [Program to compile C++ vecmathlib],
+               [$LLVM_BINDIR])
 AM_CONDITIONAL([CLANGXX_AVAILABLE], test ! -z $CLANGXX)
 
-LLVM_PROG([OPT], [opt], [LLVM optimizer])
-LLVM_PROG([LLC], [llc], [LLVM static compiler])
-LLVM_PROG([LLVM_AS], [llvm-as], [LLVM assembler])
-LLVM_PROG([LLVM_AR], [llvm-ar], [LLVM archiver])
-LLVM_PROG([LLVM_LINK], [llvm-link], [LLVM IR linker])
+LLVM_PROG([OPT], [opt], [LLVM optimizer], [$LLVM_BINDIR])
+LLVM_PROG([LLC], [llc], [LLVM static compiler], [$LLVM_BINDIR])
+LLVM_PROG([LLVM_AS], [llvm-as], [LLVM assembler], [$LLVM_BINDIR])
+LLVM_PROG([LLVM_AR], [llvm-ar], [LLVM archiver], [$LLVM_BINDIR])
+LLVM_PROG([LLVM_LINK], [llvm-link], [LLVM IR linker], [$LLVM_BINDIR])
 
-# $CLANG and $LLC are needed by config/xclang
 AC_DEFINE_UNQUOTED([CLANG], ["$CLANG"], [clang executable.])
 AC_DEFINE_UNQUOTED([LLC], ["$LLC"], [LLVM compiler executable.])
+
+# LLVM programs on build machine
+LLVM_PROG([CLANG_FOR_BUILD], [clang],
+          [Program to compile kernels to bytecode],
+          [$LLVM_BINDIR_FOR_BUILD])
+# Check for a functioning clang++. It is needed to compile faster math
+# builtins from vecmathlib.
+LLVM_PROG_WARN([CLANGXX_FOR_BUILD], [clang++],
+               [Program to compile C++ vecmathlib],
+               [$LLVM_BINDIR_FOR_BUILD])
+AM_CONDITIONAL([CLANGXX_FOR_BUILD_AVAILABLE], test ! -z $CLANGXX_FOR_BUILD)
+
+LLVM_PROG([OPT_FOR_BUILD], [opt],
+          [LLVM optimizer], [$LLVM_BINDIR_FOR_BUILD])
+LLVM_PROG([LLC_FOR_BUILD], [llc],
+          [LLVM static compiler], [$LLVM_BINDIR_FOR_BUILD])
+LLVM_PROG([LLVM_AS_FOR_BUILD], [llvm-as],
+          [LLVM assembler], [$LLVM_BINDIR_FOR_BUILD])
+LLVM_PROG([LLVM_AR_FOR_BUILD], [llvm-ar],
+          [LLVM archiver], [$LLVM_BINDIR_FOR_BUILD])
+LLVM_PROG([LLVM_LINK_FOR_BUILD], [llvm-link],
+          [LLVM IR linker], [$LLVM_BINDIR_FOR_BUILD])
+
+# $CLANG and $LLC are needed by config/xclang
+AC_DEFINE_UNQUOTED([CLANG_FOR_BUILD], ["$CLANG_FOR_BUILD"],
+                   [clang executable.])
+AC_DEFINE_UNQUOTED([LLC_FOR_BUILD], ["$LLC_FOR_BUILD"],
+                   [LLVM compiler executable.])
 export CLANG
 export LLC
 
 # Checks for programs.
-if test ! -z "$CLANGXX"; then
+if test ! -z "$CLANGXX_FOR_BUILD"; then
   # Test that clang++ can compile a simple C++ program.
   AC_LANG([C++])
 

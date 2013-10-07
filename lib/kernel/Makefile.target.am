@@ -38,8 +38,8 @@ include $(top_srcdir)/lib/kernel/sources.mk
 
 nodist_libkernel_a_SOURCES=$(libkernel_SRCS)
 
-RANLIB = @LLVM_RANLIB@
-AR = @LLVM_AR@
+RANLIB = @LLVM_RANLIB_FOR_BUILD@
+AR = @LLVM_AR_FOR_BUILD@
 
 CLANGFLAGS += -target @TARGET@
 CLANG_DEFAULT_INCLUDES = -include $(top_builddir)/include/@TARGET@/types.h

@@ -28,6 +28,13 @@ set -e
 
 target=@HOST@
 
+OPT="@OPT@"
+LLVM_LINK="@LLVM_LINK@"
+# BEGIN REMOVE ONCE INSTALLED
+OPT="@OPT_FOR_BUILD@"
+LLVM_LINK="@LLVM_LINK_FOR_BUILD@"
+# END REMOVE ONCE INSTALLED
+
 while getopts k:x:y:z:t:o: o
 do
     case "$o" in
@@ -87,7 +94,7 @@ full_target_dir="@pkglibdir@/${target_dir}"
 full_target_dir="@abs_top_builddir@/lib/kernel/${target_dir}"
 # END REMOVE ONCE INSTALLED
 
-@LLVM_LINK@ -o ${linked_bc}  $1 "$full_target_dir"/kernel-$target.bc 
+"${LLVM_LINK}" -o ${linked_bc}  $1 "$full_target_dir"/kernel-$target.bc 
 
 header="`dirname $1`/`basename $1 .bc`_header.h"
 
@@ -143,7 +150,7 @@ fi
 # also be harmful for wg-vectorization where we want to try to vectorize
 # the code it wants to convert e.g. to a memset or a memcpy
 
-@OPT@ -load=${pocl_lib} -domtree -workitem-handler-chooser -break-constgeps -automatic-locals -flatten -always-inline \
+"${OPT}" -load=${pocl_lib} -domtree -workitem-handler-chooser -break-constgeps -automatic-locals -flatten -always-inline \
     -globaldce -simplifycfg -loop-simplify -phistoallocas -isolate-regions -uniformity -implicit-loop-barriers -loop-barriers \
     -barriertails -barriers -isolate-regions -add-wi-metadata -wi-aa -workitemrepl -workitemloops  \
     -allocastoentry -workgroup -kernel=${kernel} -local-size=${size_x} ${size_y} ${size_z} -disable-simplify-libcalls \

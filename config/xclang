@@ -19,8 +19,8 @@ shift $((${OPTIND}-1))
 
 # CLANG and llc should be defined and exported in configure script
 # but in case of direct call, do something not too bad
-CLANG="${CLANG:-clang}"
-LLC="${LLC:-llc}"
+CLANG="${CLANG_FOR_BUILD:-clang}"
+LLC="${LLC_FOR_BUILD:-llc}"
 
 if [ "x$host" = x ]
 then
