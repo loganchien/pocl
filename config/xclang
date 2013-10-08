@@ -17,6 +17,10 @@ do
 done
 shift $((${OPTIND}-1))
 
+if [ -z "${output}" ]; then
+  output="-o ${1%.*}.o"
+fi
+
 # CLANG and llc should be defined and exported in configure script
 # but in case of direct call, do something not too bad
 CLANG="${CLANG_FOR_BUILD:-clang}"
