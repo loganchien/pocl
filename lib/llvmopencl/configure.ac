@@ -86,14 +86,32 @@ case "$LLVM_VERSION" in
     ;;
 esac
 
+# When building with API linking, clang is always linked statically, so user might want to link llvm static to libpocl too
+# or risk causing version mismatches
+# Also note, when building LLVM with cmake, there is no libLLVM-<versionnumber>.so
+link_llvm_static="no"
+AC_ARG_ENABLE([static-llvm],
+              [AS_HELP_STRING([--enable-static-llvm],
+                              [Link LLVM statically. Default is dynamic. Only used if --enable-llvmapi is given.])],
+              [link_llvm_static="yes"])
+
 # Search for "libLLVM-$LLVM_VERSION$LIBRARY_SUFFIX" (eg. libLLVM-3.4.so)
 LLVM_SHARED_LIB_FILE=$LLVM_LIBDIR/libLLVM-$LLVM_VERSION$LIBRARY_SUFFIX
-if test ! -e $LLVM_SHARED_LIB_FILE; then
-  AC_MSG_WARN([
+
+if test "$link_llvm_static" = "yes"; then
+  LLVM_LIBS=$($LLVM_CONFIG --libs)
+else
+  LLVM_LIBS=-lLLVM-$LLVM_VERSION
+if test ! -e $LLVM_SHARED_LIB_FILE;
+then
+        AC_MSG_ERROR([
 $LLVM_SHARED_LIB_FILE not found.
 Recompile and install LLVM after ./configure --enable-shared.
 Read the INSTALL file for details.])
 fi
+fi
+
+AC_SUBST([LLVM_LIBS])
 
 # Check LLVM RTTI option
 LLVM_RTTI_CHECK=$($LLVM_CONFIG --cxxflags | grep -i "\-fno-rtti")
